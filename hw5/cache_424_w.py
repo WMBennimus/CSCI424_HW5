@@ -61,15 +61,18 @@ class Cache:
     '''
 
     def find_set(self, address):
-        pass
+        start = self.blockBits
+        end = start + self.setBits
+        return (address >> start) - ((address >> end) << (end - start))
 
     '''
     Returns the tag of an address based on the policy discussed in the class
     Do NOT change the function definition and arguments
     '''
-    
+
     def find_tag(self, address):
-        pass
+        start = self.blockBits + self.setBits
+        return address >> start
 
     '''
     Search through cache for address
@@ -79,14 +82,37 @@ class Cache:
     '''
 
     def find(self, address):
-        pass
-    
+        found = False
+        set = self.find_set(address)
+        tag = self.find_tag(address)
+        for i in range(0,len(self.metaCache[set])):
+            if self.metaCache[set][i] == tag:
+                found = True
+                block = self.cache[set][i]
+                for j in range(0, i):  # Move all blocks to the right. Rightmost block is overwritten
+                    self.metaCache[set][j+1] = self.metaCache[set][j]
+                    self.cache[set][j+1] = self.cache[set][j]
+                self.metaCache[set][0] = tag
+                self.cache[set][0] = block
+                break
+        if found:
+            self.hit = self.hit + 1.0
+        return found
+
     '''
     Load data into the cache. 
     Something might need to be evicted from the cache and send back to memory
     Do NOT change the function definition and arguments
     '''
-   
-    def load(self, address):
-        pass
 
+    def load(self, address):
+        set = self.find_set(address)
+        tag = self.find_tag(address)
+        for i in range(1, len(self.metaCache[set])):        #Move all blocks to the right. Rightmost block is overwritten
+            self.metaCache[set][i] = self.metaCache[set][i-1]
+            self.cache[set][i] = self.cache[set][i-1]
+        self.metaCache[set][0] = tag
+        for i in range(0, self.blockSize):                  #Insert new block into position 0
+            self.cache[set][0][i] = address + i
+        print(self.metaCache[set])
+        #print(self.cache[set])
